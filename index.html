@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>MinorityReport.js</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=yes">
+    <style>
+        canvas {display:block;float:right;}
+        .hidden {display:none;}
+
+        /* flip and scale the video canvas */
+        #c {
+            position: absolute;
+            right:256px;
+            bottom:0;
+            -moz-transform: scale(-0.5, 0.5);
+            -moz-transform-origin: 66.67% 100%;
+            -webkit-transform: scale(-0.5, 0.5);
+            -webkit-transform-origin: 66.67% 100%;
+            -o-transform: scale(-0.5, 0.5);
+            -o-transform-origin: 66.67% 100%;
+            transform: scale(-0.5, 0.5);
+            transform-origin: 66.67% 100%;
+        }
+
+        /* just flip the diff canvas */
+        #diff {
+            position: absolute;
+            right:0;
+            bottom:0;
+            -moz-transform: scale(-1, 1);
+            -webkit-transform: scale(-1, 1);
+            -o-transform: scale(-1, 1);
+            transform: scale(-1, 1);
+            filter: FlipH;
+        }
+    </style>
+  </head>
+  <body>
+    <div id="fps"></div>
+    <div id="amplitude"></div>
+    <video id="v" class="hidden" autoplay>Sorry, you're browser doesn't support video. Please try <a href="http://getfirefox.com">Firefox</a>.</video>
+    <canvas width="256" height="256" id="diff"></canvas>
+    <canvas id="c"></canvas>
+    <script>
+
+        // Polyfill - requestAnimationFrame - only basic shim as very old browsers don't support getUserMedia (from http://paulirish.com/2011/requestanimationframe-for-smart-animating/)
+        window.requestAnimationFrame = (function(){
+          return  window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || 
+                  function( callback ){
+                    window.setTimeout(callback, 1000 / 60);
+                  };
+        })();
+            
+        navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+        window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
+
+        // Global constants (though some are set once video size is known!)
+        var PAINTWIDTH = 0;
+        var PAINTHEIGHT = 0;
+
+        // Global variables
+        var v,
+            c,
+            ctx,
+            diff,
+            difftx,
+            dbout,
+            dboutx,
+            lastimg = null,
+            fps=0,
+            noblocks=16;
+
+        // normalise diff data
+        var dave = 30,
+            dmax = 0;
+
+        // setup storing the last pictures
+        var lastblocks;
+
+        var mouse_down = ('createTouch' in document ? 'ontouchstart' : 'onmousedown');
+
+        // resize c once we know the size of the video
+        v.addEventListener("play", function() {  
+            PAINTWIDTH = c.width = v.videoWidth;  
+            PAINTHEIGHT = c.height = v.videoHeight; 
+        }, false);
+
+        // basic getUserMedia code fom http://dev.opera.com/articles/view/playing-with-html5-video-and-getusermedia-support/
+
+        function init() {
+            v = document.getElementById('v');
+            c = document.getElementById('c');
+            ctx = c.getContext('2d');
+            diff = document.getElementById('diff');
+            difftx = diff.getContext('2d');
+            
+            // Get the stream from the camera using getUserMedia
+            if (navigator.getUserMedia) {
+                // This beautiful hack for the options is from @kanasansoft:
+                // http://www.kanasansoft.com/weblab/2012/06/arguments_of_getusermedia.html
+                var gumOptions = {video: true, toString: function(){return 'video';}};
+
+                navigator.getUserMedia(gumOptions, successCallback, errorCallback);
+                
+                function successCallback(stream) {
+                    // Replace the source of the video element with the stream from the camera
+                    v.src = window.URL.createObjectURL(stream) || stream;
+                    v.play();
+                }
+                
+                function errorCallback(error) {
+                    console.error('An error occurred: [CODE ' + error.code + ']');
+                    v.play();
+                }
+            } else {
+                var errorMsg = '<p class="error">Uh oh, it appears your browser doesn\'t support this feature.<br>Please try with a browser that has camera support.</p>';
+                document.querySelector('[role=main]').innerHTML = errorMsg;
+                console.log('Native web camera streaming (getUserMedia) is not supported in this browser.');
+                v.play();
+            }
+            
+            window.setInterval(fpsf,2000);
+            animLoop();
+        }
+
+        function fpsf(){
+            document.getElementById("fps").innerHTML = "FPS: "+fps/2;
+            fps = 0;
+        }
+
+        // useful functions:
+        function abs(x){
+            return (x<0) ? -x : x;
+        }
+
+        function animLoop(){
+            var current,
+                blocks = new Uint8ClampedArray(noblocks*noblocks),
+                sqrthree = Math.sqrt(3),
+                dw = parseInt(PAINTWIDTH/noblocks),
+                dh = parseInt(PAINTHEIGHT/noblocks),
+                dbw = parseInt(diff.width/noblocks),
+                dbh = parseInt(diff.height/noblocks);
+            fps++;
+
+            window.requestAnimationFrame(animLoop);
+
+            ctx.drawImage(v, 0, 0);
+            if(lastimg && PAINTWIDTH != 0){
+                current = ctx.getImageData(0,0,PAINTWIDTH,PAINTHEIGHT);
+                for(var i=0;i<noblocks;i++){
+                    for(var j=0;j<noblocks;j++){
+                        var sum = 0;
+                        for(var ii=dw*i;ii<dw*(i+1);ii++){
+                            for(var jj=dh*j;jj<dh*(j+1);jj++){
+                                // Euclidien distance nomalised to [0,255]
+                                sum += abs(lastimg.data[4*(PAINTWIDTH*jj+ii)] - current.data[4*(PAINTWIDTH*jj+ii)]) + abs(lastimg.data[4*(PAINTWIDTH*jj+ii)+1] - current.data[4*(PAINTWIDTH*jj+ii)+1]) + abs(lastimg.data[4*(PAINTWIDTH*jj+ii)+2] - current.data[4*(PAINTWIDTH*jj+ii)+2]);
+                            }
+                        }
+
+                        // max of sum = 256*noblocks^2
+                        blocks[noblocks*i+j] = Math.min(255,(2*sum)/(3*noblocks*noblocks));
+                    }
+                }
+
+                // Print the debug
+                for(var i=0;i<noblocks;i++){
+                    for(var j=0;j<noblocks;j++){
+                        difftx.fillStyle = "rgb("+blocks[noblocks*i+j]+","+blocks[noblocks*i+j]+","+blocks[noblocks*i+j]+")";
+                        difftx.fillRect(dbw*i,dbh*j,dbw,dbh);
+                    }
+                }
+
+                // Attempt 3 - stupid center of mass
+                var mx=0.0, my=0.0, msum=0, store;
+                for(var i=0;i<noblocks;i++){
+                    for(var j=0;j<noblocks;j++){
+                        store = Math.max(blocks[noblocks*i+j]-dave,0);
+                        mx += store*(dbw+0.5)*i;
+                        my += store*(dbh+0.5)*j;
+                        msum += store;
+                    }
+                }
+                if(msum){
+                    mx /= msum;
+                    my /= msum;
+
+                    difftx.fillStyle = "rgb("+parseInt(255.0*msum/13000.0)+",0,0)";
+                    difftx.fillRect(mx,my,10,10);
+                    if(fps%10==0) document.getElementById("amplitude").innerHTML = " Amplitude "+msum+", Ave:"+(1.0*msum)/(noblocks*noblocks)+" debug: "+255.0*msum/13000.0;
+                }
+
+                /*
+
+                // Attempt 2 - change from last neighbouring points
+                difftx.clearRect(0,0,PAINTWIDTH,PAINTHEIGHT);
+                if(lastblocks){
+                    // Work out which direction the change is going
+                    // step in one from the edge as we're going to be looking in all directions
+                    for(var i=1;i<noblocks-1;i++){
+                        for(var j=1;j<noblocks-1;j++){
+                            // are we inc or dec?
+                            var bdiff = blocks[noblocks*i+j] - lastblocks[noblocks*i+j];
+                            var lr=0, ud=0, tot, mag;
+                            tot = lastblocks[noblocks*i+(j+1)]+lastblocks[noblocks*i+(j-1)]+lastblocks[noblocks*(i+1)+j]+lastblocks[noblocks*(i-1)+j]
+                            if(tot > 10){
+                                if(bdiff>0){
+                                    // rising up, which direction did we come from?
+                                    // lr - left/right, +ve for right/ -ve for left
+                                    // ud - up/down, +ve for down/ -ve for up
+                                    lr = bdiff*(1.0*lastblocks[noblocks*i+j+1] - lastblocks[noblocks*i+j-1])/tot;
+                                    ud = bdiff*(1.0*lastblocks[noblocks*(i+1)+j] - lastblocks[noblocks*(i-1)+j])/tot;
+                                }else{
+                                    // decreasing, where are we going?
+                                    lr = -bdiff*(1.0*blocks[noblocks*i+j+1] - blocks[noblocks*i+j-1])/tot;
+                                    ud = -bdiff*(1.0*blocks[noblocks*(i+1)+j] - blocks[noblocks*(i-1)+j])/tot;
+                                }
+
+                                mag = Math.sqrt(lr*lr + ud*ud);
+
+                                difftx.beginPath();
+                                difftx.moveTo(dbw*(i+0.5),dbh*(j+0.5));
+                                difftx.lineTo(dbw*(i+0.5)+lr/10.0,dbh*(j+0.5)+ud/10.0);
+                                difftx.stroke();
+                            }
+                        }
+                    }
+                }
+                lastblocks = blocks;
+
+                */
+
+                // and setup for next time
+                lastimg = current;
+            }else{
+                // first sec: make sure resizing has been done
+                PAINTWIDTH = c.width = v.videoWidth;  
+                PAINTHEIGHT = c.height = v.videoHeight;  
+                if(PAINTWIDTH > 0) lastimg = ctx.getImageData(0,0,PAINTWIDTH,PAINTHEIGHT);
+            }
+        }
+
+        window.onload = init;
+
+    </script>
+  </body>
+</html>
