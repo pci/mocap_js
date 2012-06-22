@@ -4,44 +4,11 @@
     <title>MinorityReport.js</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, user-scalable=yes">
-    <style>
-        canvas {display:block;float:right;}
-        .hidden {display:none;}
-
-        /* flip and scale the video canvas */
-        #c {
-            position: absolute;
-            right:128px;
-            bottom:0;
-            -moz-transform: scale(-0.25, 0.25);
-            -moz-transform-origin: 80% 100%;
-            -webkit-transform: scale(-0.25, 0.25);
-            -webkit-transform-origin: 80% 100%;
-            -o-transform: scale(-0.25, 0.25);
-            -o-transform-origin: 80% 100%;
-            transform: scale(-0.25, 0.25);
-            transform-origin: 80% 100%;
-        }
-
-        /* just flip the diff canvas */
-        #diff {
-            position: absolute;
-            right:0;
-            bottom:0;
-            -moz-transform: scale(-1, 1);
-            -webkit-transform: scale(-1, 1);
-            -o-transform: scale(-1, 1);
-            transform: scale(-1, 1);
-            filter: FlipH;
-        }
-    </style>
   </head>
   <body>
     <div id="fps"></div>
     <div id="amplitude"></div>
     <div id="action"></div>
-    <video id="v" class="hidden" autoplay>Sorry, you're browser doesn't support video. Please try <a href="http://getfirefox.com">Firefox</a>.</video>
-    <canvas width="128" height="128" id="diff"></canvas>
     <canvas id="c"></canvas>
     <script>
 
@@ -91,10 +58,10 @@
         // basic getUserMedia code fom http://dev.opera.com/articles/view/playing-with-html5-video-and-getusermedia-support/
 
         this.init = function() {
-            v = document.getElementById('v');
-            c = document.getElementById('c');
+            v = document.createElement('video');
+            c = document.createElement('canvas');
             ctx = c.getContext('2d');
-            diff = document.getElementById('diff');
+            diff = document.createElement('canvas');
             difftx = diff.getContext('2d');
 
             // resize c once we know the size of the video
@@ -102,6 +69,35 @@
                 PAINTWIDTH = c.width = v.videoWidth;  
                 PAINTHEIGHT = c.height = v.videoHeight; 
             }, false);
+
+            // Setup styles on video and canvas
+            diff.style.position = "absolute";
+            diff.style.right = 0;
+            diff.style.bottom = 0;
+            diff.width = 128;
+            diff.height = 128;
+            diff.style.oTransform = "scale(-1, 1)";
+            diff.style.mozTransform = "scale(-1, 1)";
+            diff.style.webkitTransform = "scale(-1, 1)";
+            diff.style.msTransform = "scale(-1, 1)";
+            diff.style.transform = "scale(-1, 1)";
+            c.style.position = "absolute";
+            c.style.right = "128px";
+            c.style.bottom = 0;
+            c.style.mozTransform = "scale(-0.25, 0.25)";
+            c.style.mozTransformOrigin = "80% 100%";
+            c.style.oTransform = "scale(-0.25, 0.25)";
+            c.style.oTransformOrigin = "80% 100%";
+            c.style.webkitTransform = "scale(-0.25, 0.25)";
+            c.style.webkitTransformOrigin = "80% 100%";
+            c.style.msTransform = "scale(-0.25, 0.25)";
+            c.style.msTransformOrigin = "80% 100%";
+            c.style.transform = "scale(-0.25, 0.25)";
+            c.style.transformOrigin = "80% 100%";
+
+            // attach
+            document.querySelector("body").appendChild(diff);
+            document.querySelector("body").appendChild(c);
             
             // Get the stream from the camera using getUserMedia
             if (navigator.getUserMedia) {
@@ -131,6 +127,7 @@
             window.setInterval(that.fpsf,2000);
             that.animLoop();
         }
+
 
         this.fpsf = function(){
             // Frames per (2) second(s) 
