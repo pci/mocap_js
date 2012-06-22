@@ -11,16 +11,16 @@
         /* flip and scale the video canvas */
         #c {
             position: absolute;
-            right:256px;
+            right:128px;
             bottom:0;
-            -moz-transform: scale(-0.5, 0.5);
-            -moz-transform-origin: 66.67% 100%;
-            -webkit-transform: scale(-0.5, 0.5);
-            -webkit-transform-origin: 66.67% 100%;
-            -o-transform: scale(-0.5, 0.5);
-            -o-transform-origin: 66.67% 100%;
-            transform: scale(-0.5, 0.5);
-            transform-origin: 66.67% 100%;
+            -moz-transform: scale(-0.25, 0.25);
+            -moz-transform-origin: 80% 100%;
+            -webkit-transform: scale(-0.25, 0.25);
+            -webkit-transform-origin: 80% 100%;
+            -o-transform: scale(-0.25, 0.25);
+            -o-transform-origin: 80% 100%;
+            transform: scale(-0.25, 0.25);
+            transform-origin: 80% 100%;
         }
 
         /* just flip the diff canvas */
@@ -39,12 +39,13 @@
   <body>
     <div id="fps"></div>
     <div id="amplitude"></div>
+    <div id="action"></div>
     <video id="v" class="hidden" autoplay>Sorry, you're browser doesn't support video. Please try <a href="http://getfirefox.com">Firefox</a>.</video>
-    <canvas width="256" height="256" id="diff"></canvas>
+    <canvas width="128" height="128" id="diff"></canvas>
     <canvas id="c"></canvas>
     <script>
 
-        // Polyfill - requestAnimationFrame - only basic shim as very old browsers don't support getUserMedia (from http://paulirish.com/2011/requestanimationframe-for-smart-animating/)
+        // Polyfill - requestAnimationFrame - only basic shim as very old browsers don't support getUserMedia anyway (from http://paulirish.com/2011/requestanimationframe-for-smart-animating/)
         window.requestAnimationFrame = (function(){
           return  window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || 
                   function( callback ){
@@ -69,16 +70,19 @@
             dboutx,
             lastimg = null,
             fps=0,
-            noblocks=16;
+            cfps=60,
+            noblocks=16,
+            mstore = new Array(120),
+            mp = 0,
+            timeout = 0;
 
         // normalise diff data
+        // mindist - the minimum distance the motion has to cover (in under actiontimeout) to be registered
+        // action timeout - number of seconds gap needed before the next action is allowed
         var dave = 30,
-            dmax = 0;
-
-        // setup storing the last pictures
-        var lastblocks;
-
-        var mouse_down = ('createTouch' in document ? 'ontouchstart' : 'onmousedown');
+            dmax = 10000,
+            mindist = 0.25,
+            actiontimeout = 0.5;
 
         // resize c once we know the size of the video
         v.addEventListener("play", function() {  
@@ -125,7 +129,10 @@
         }
 
         function fpsf(){
-            document.getElementById("fps").innerHTML = "FPS: "+fps/2;
+            // Frames per (2) second(s) 
+            // TODO - dynamic resizing of noblocks for low-end devices
+            cfps = fps/2;
+            document.getElementById("fps").innerHTML = "FPS: "+cfps;
             fps = 0;
         }
 
@@ -137,17 +144,22 @@
         function animLoop(){
             var current,
                 blocks = new Uint8ClampedArray(noblocks*noblocks),
-                sqrthree = Math.sqrt(3),
                 dw = parseInt(PAINTWIDTH/noblocks),
                 dh = parseInt(PAINTHEIGHT/noblocks),
                 dbw = parseInt(diff.width/noblocks),
                 dbh = parseInt(diff.height/noblocks);
             fps++;
 
+            // looping goodness
             window.requestAnimationFrame(animLoop);
 
+            // draw the webcam video
             ctx.drawImage(v, 0, 0);
+
             if(lastimg && PAINTWIDTH != 0){
+
+                // Firstly create the difference blocks
+                // TODO - remove the double reduce (once as current, once as lastimg)
                 current = ctx.getImageData(0,0,PAINTWIDTH,PAINTHEIGHT);
                 for(var i=0;i<noblocks;i++){
                     for(var j=0;j<noblocks;j++){
@@ -172,13 +184,13 @@
                     }
                 }
 
-                // Attempt 3 - stupid center of mass
+                // Attempt 3 - very dumb: center of mass
                 var mx=0.0, my=0.0, msum=0, store;
                 for(var i=0;i<noblocks;i++){
                     for(var j=0;j<noblocks;j++){
                         store = Math.max(blocks[noblocks*i+j]-dave,0);
-                        mx += store*(dbw+0.5)*i;
-                        my += store*(dbh+0.5)*j;
+                        mx += store*dbw*(i+0.5);
+                        my += store*dbh*(j+0.5);
                         msum += store;
                     }
                 }
@@ -186,63 +198,68 @@
                     mx /= msum;
                     my /= msum;
 
-                    difftx.fillStyle = "rgb("+parseInt(255.0*msum/13000.0)+",0,0)";
-                    difftx.fillRect(mx,my,10,10);
-                    if(fps%10==0) document.getElementById("amplitude").innerHTML = " Amplitude "+msum+", Ave:"+(1.0*msum)/(noblocks*noblocks)+" debug: "+255.0*msum/13000.0;
-                }
+                    if(timeout > 0) timeout--;
+                    if((1.0*msum)/dmax > 1 && timeout == 0){
+                        // Ok - so need to check
+                        // distance traveled over time, but time between measurements is varied!
+                        // 60fps is definite max (is it?)
+                        // can use the last fps as that gives a good estimate
 
-                /*
-
-                // Attempt 2 - change from last neighbouring points
-                difftx.clearRect(0,0,PAINTWIDTH,PAINTHEIGHT);
-                if(lastblocks){
-                    // Work out which direction the change is going
-                    // step in one from the edge as we're going to be looking in all directions
-                    for(var i=1;i<noblocks-1;i++){
-                        for(var j=1;j<noblocks-1;j++){
-                            // are we inc or dec?
-                            var bdiff = blocks[noblocks*i+j] - lastblocks[noblocks*i+j];
-                            var lr=0, ud=0, tot, mag;
-                            tot = lastblocks[noblocks*i+(j+1)]+lastblocks[noblocks*i+(j-1)]+lastblocks[noblocks*(i+1)+j]+lastblocks[noblocks*(i-1)+j]
-                            if(tot > 10){
-                                if(bdiff>0){
-                                    // rising up, which direction did we come from?
-                                    // lr - left/right, +ve for right/ -ve for left
-                                    // ud - up/down, +ve for down/ -ve for up
-                                    lr = bdiff*(1.0*lastblocks[noblocks*i+j+1] - lastblocks[noblocks*i+j-1])/tot;
-                                    ud = bdiff*(1.0*lastblocks[noblocks*(i+1)+j] - lastblocks[noblocks*(i-1)+j])/tot;
-                                }else{
-                                    // decreasing, where are we going?
-                                    lr = -bdiff*(1.0*blocks[noblocks*i+j+1] - blocks[noblocks*i+j-1])/tot;
-                                    ud = -bdiff*(1.0*blocks[noblocks*(i+1)+j] - blocks[noblocks*(i-1)+j])/tot;
-                                }
-
-                                mag = Math.sqrt(lr*lr + ud*ud);
-
-                                difftx.beginPath();
-                                difftx.moveTo(dbw*(i+0.5),dbh*(j+0.5));
-                                difftx.lineTo(dbw*(i+0.5)+lr/10.0,dbh*(j+0.5)+ud/10.0);
-                                difftx.stroke();
+                        // ok so movment of [mindist]*width is needed in [actiontimeout]*cfps frames
+                        var ls,rs,us,ds,cx,cy,pos,deltaw,deltah;
+                        ls=rs=us=ds=0;
+                        deltaw = mindist*diff.width;
+                        deltah = mindist*diff.height;
+                        for(var i=0;i<parseInt(actiontimeout*cfps);i++){
+                            pos = mp-2*i-2;
+                            if(pos < 0) pos = pos+120;
+                            cx = mstore[pos]; cy = mstore[pos+1];
+                            if(cx >= 0 && cy >= 0){
+                                if(cx > mx+deltaw) rs++;
+                                if(cx < mx-deltaw) ls++;
+                                if(cy > my+deltah) us++;
+                                if(cy < my-deltah) ds++;
                             }
                         }
+
+                        // print results:
+                        var biggest;
+                        if(rs>0 || ls >0 || us>0 || ds>0){
+                            // set the result
+                            if(rs>0) biggest = "right";
+                            if(ls>0) biggest = "left";
+                            if(us>0) biggest = "up";
+                            if(ds>0) biggest = "down";
+                            // and the timeout
+                            timeout = parseInt(actiontimeout*cfps);
+                            document.getElementById("action").innerHTML += biggest;
+                        }
+                        // cyclic store
+                        mstore[mp++] = mx; mstore[mp++] = my;
+                    } else {
+                        // cyclic store - not a good enough confidence
+                        mstore[mp++] = -1; mstore[mp++] = -1;
+                    }
+                    mp = mp%120;
+
+                    difftx.fillStyle = (1.0*msum)/dmax > 1 ?  "rgb(0,255,0)" : "rgb("+parseInt(Math.min(255.0*msum/dmax,255))+",0,0)";
+                    difftx.fillRect(mx,my,10,10);
+                    if(fps%5==0) {
+                        document.getElementById("amplitude").innerHTML = " Amplitude "+msum+", Conf:"+Math.min(1.0,(1.0*msum)/dmax);
                     }
                 }
-                lastblocks = blocks;
-
-                */
 
                 // and setup for next time
                 lastimg = current;
             }else{
-                // first sec: make sure resizing has been done
+                // loop till it works: make sure resizing has been done
                 PAINTWIDTH = c.width = v.videoWidth;  
                 PAINTHEIGHT = c.height = v.videoHeight;  
                 if(PAINTWIDTH > 0) lastimg = ctx.getImageData(0,0,PAINTWIDTH,PAINTHEIGHT);
             }
         }
 
-        window.onload = init;
-
+        window.addEventListener('load',init);
     </script>
   </body>
 </html>
