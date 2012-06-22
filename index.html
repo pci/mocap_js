@@ -45,16 +45,19 @@
     <canvas id="c"></canvas>
     <script>
 
-        // Polyfill - requestAnimationFrame - only basic shim as very old browsers don't support getUserMedia anyway (from http://paulirish.com/2011/requestanimationframe-for-smart-animating/)
-        window.requestAnimationFrame = (function(){
-          return  window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || 
-                  function( callback ){
-                    window.setTimeout(callback, 1000 / 60);
-                  };
-        })();
-            
-        navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
-        window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
+    // Polyfill - requestAnimationFrame - only basic shim as very old browsers don't support getUserMedia anyway (from http://paulirish.com/2011/requestanimationframe-for-smart-animating/)
+    window.requestAnimationFrame = (function(){
+      return  window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || 
+              function( callback ){
+                window.setTimeout(callback, 1000 / 60);
+              };
+    })();
+        
+    navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+    window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
+
+    function motionSensor(options){
+        "use strict";
 
         // Global constants (though some are set once video size is known!)
         var PAINTWIDTH = 0;
@@ -74,7 +77,8 @@
             noblocks=16,
             mstore = new Array(120),
             mp = 0,
-            timeout = 0;
+            timeout = 0,
+            that = this;
 
         // normalise diff data
         // mindist - the minimum distance the motion has to cover (in under actiontimeout) to be registered
@@ -84,39 +88,39 @@
             mindist = 0.25,
             actiontimeout = 0.5;
 
-        // resize c once we know the size of the video
-        v.addEventListener("play", function() {  
-            PAINTWIDTH = c.width = v.videoWidth;  
-            PAINTHEIGHT = c.height = v.videoHeight; 
-        }, false);
-
         // basic getUserMedia code fom http://dev.opera.com/articles/view/playing-with-html5-video-and-getusermedia-support/
 
-        function init() {
+        this.init = function() {
             v = document.getElementById('v');
             c = document.getElementById('c');
             ctx = c.getContext('2d');
             diff = document.getElementById('diff');
             difftx = diff.getContext('2d');
+
+            // resize c once we know the size of the video
+            v.addEventListener("play", function() {  
+                PAINTWIDTH = c.width = v.videoWidth;  
+                PAINTHEIGHT = c.height = v.videoHeight; 
+            }, false);
             
             // Get the stream from the camera using getUserMedia
             if (navigator.getUserMedia) {
                 // This beautiful hack for the options is from @kanasansoft:
                 // http://www.kanasansoft.com/weblab/2012/06/arguments_of_getusermedia.html
                 var gumOptions = {video: true, toString: function(){return 'video';}};
-
-                navigator.getUserMedia(gumOptions, successCallback, errorCallback);
                 
-                function successCallback(stream) {
+                that.successCallback = function(stream) {
                     // Replace the source of the video element with the stream from the camera
                     v.src = window.URL.createObjectURL(stream) || stream;
                     v.play();
                 }
                 
-                function errorCallback(error) {
+                that.errorCallback = function(error) {
                     console.error('An error occurred: [CODE ' + error.code + ']');
                     v.play();
                 }
+
+                navigator.getUserMedia(gumOptions, that.successCallback, that.errorCallback);
             } else {
                 var errorMsg = '<p class="error">Uh oh, it appears your browser doesn\'t support this feature.<br>Please try with a browser that has camera support.</p>';
                 document.querySelector('[role=main]').innerHTML = errorMsg;
@@ -124,11 +128,11 @@
                 v.play();
             }
             
-            window.setInterval(fpsf,2000);
-            animLoop();
+            window.setInterval(that.fpsf,2000);
+            that.animLoop();
         }
 
-        function fpsf(){
+        this.fpsf = function(){
             // Frames per (2) second(s) 
             // TODO - dynamic resizing of noblocks for low-end devices
             cfps = fps/2;
@@ -137,11 +141,11 @@
         }
 
         // useful functions:
-        function abs(x){
+        this.abs = function(x){
             return (x<0) ? -x : x;
         }
 
-        function animLoop(){
+        this.animLoop = function(){
             var current,
                 blocks = new Uint8ClampedArray(noblocks*noblocks),
                 dw = parseInt(PAINTWIDTH/noblocks),
@@ -151,7 +155,7 @@
             fps++;
 
             // looping goodness
-            window.requestAnimationFrame(animLoop);
+            window.requestAnimationFrame(that.animLoop);
 
             // draw the webcam video
             ctx.drawImage(v, 0, 0);
@@ -167,7 +171,7 @@
                         for(var ii=dw*i;ii<dw*(i+1);ii++){
                             for(var jj=dh*j;jj<dh*(j+1);jj++){
                                 // Euclidien distance nomalised to [0,255]
-                                sum += abs(lastimg.data[4*(PAINTWIDTH*jj+ii)] - current.data[4*(PAINTWIDTH*jj+ii)]) + abs(lastimg.data[4*(PAINTWIDTH*jj+ii)+1] - current.data[4*(PAINTWIDTH*jj+ii)+1]) + abs(lastimg.data[4*(PAINTWIDTH*jj+ii)+2] - current.data[4*(PAINTWIDTH*jj+ii)+2]);
+                                sum += that.abs(lastimg.data[4*(PAINTWIDTH*jj+ii)] - current.data[4*(PAINTWIDTH*jj+ii)]) + that.abs(lastimg.data[4*(PAINTWIDTH*jj+ii)+1] - current.data[4*(PAINTWIDTH*jj+ii)+1]) + that.abs(lastimg.data[4*(PAINTWIDTH*jj+ii)+2] - current.data[4*(PAINTWIDTH*jj+ii)+2]);
                             }
                         }
 
@@ -223,16 +227,18 @@
                         }
 
                         // print results:
-                        var biggest;
-                        if(rs>0 || ls >0 || us>0 || ds>0){
-                            // set the result
-                            if(rs>0) biggest = "right";
-                            if(ls>0) biggest = "left";
-                            if(us>0) biggest = "up";
-                            if(ds>0) biggest = "down";
+                        var biggest=0, bval;
+                        // set the result
+                        if(rs>biggest) {biggest = rs; bval = "right";}
+                        if(ls>biggest) {biggest = ls; bval = "left";}
+                        if(us>biggest) {biggest = us; bval = "up";}
+                        if(ds>biggest) {biggest = ds; bval = "down";}
+                        if(biggest>0){
+                            // send the event
+                            var event = new CustomEvent("motion", {"detail":{"dir":bval}});
+                            document.dispatchEvent(event);
                             // and the timeout
                             timeout = parseInt(actiontimeout*cfps);
-                            document.getElementById("action").innerHTML += biggest;
                         }
                         // cyclic store
                         mstore[mp++] = mx; mstore[mp++] = my;
@@ -259,7 +265,15 @@
             }
         }
 
-        window.addEventListener('load',init);
+        window.addEventListener('load',that.init);
+    }
+
+    var ms = new motionSensor();
+    document.addEventListener("motion", function(e){
+        console.log(e);
+        document.getElementById("action").innerHTML += e.detail.dir;
+    });
+
     </script>
   </body>
 </html>
