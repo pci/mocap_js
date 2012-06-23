@@ -10,6 +10,9 @@ window.requestAnimationFrame = (function(){
 navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
 window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
 
+// Mocap.js copyright Philip Ingrey 2012
+// Licensed under an MIT license, see http://pci.mit-license.org/
+
 function motionSensor(options){
     "use strict";
 
@@ -18,6 +21,7 @@ function motionSensor(options){
     var PAINTHEIGHT = 0;
 
     // Global variables
+    // TODO - can you remove some of these?
     var v,
         c,
         ctx,
@@ -42,7 +46,6 @@ function motionSensor(options){
         mindist = 0.25,
         actiontimeout = 0.5;
 
-    // basic getUserMedia code fom http://dev.opera.com/articles/view/playing-with-html5-video-and-getusermedia-support/
 
     this.init = function() {
         v = document.createElement('video');
@@ -85,8 +88,9 @@ function motionSensor(options){
         // attach
         document.querySelector("body").appendChild(diff);
         document.querySelector("body").appendChild(c);
-        
+
         // Get the stream from the camera using getUserMedia
+        // basic getUserMedia code fom http://dev.opera.com/articles/view/playing-with-html5-video-and-getusermedia-support/
         if (navigator.getUserMedia) {
             // This beautiful hack for the options is from @kanasansoft:
             // http://www.kanasansoft.com/weblab/2012/06/arguments_of_getusermedia.html
