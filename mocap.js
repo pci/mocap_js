@@ -16,6 +16,9 @@ window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
 function motionSensor(options){
     "use strict";
 
+    // Externally accessable
+    this.fps = 60;
+
     // Global constants (though some are set once video size is known!)
     var PAINTWIDTH = 0;
     var PAINTHEIGHT = 0;
@@ -30,8 +33,7 @@ function motionSensor(options){
         dbout,
         dboutx,
         lastimg = null,
-        fps=0,
-        cfps=60,
+        cfps=0,
         noblocks=16,
         mstore = new Array(120),
         mp = 0,
@@ -60,8 +62,11 @@ function motionSensor(options){
             PAINTHEIGHT = c.height = v.videoHeight; 
         }, false);
 
+        // Otherwise these get read as good results!
+        for(var i in mstore) mstore[i] = -1;
+
         // Setup styles on video and canvas
-        diff.style.position = "absolute";
+        diff.style.position = "fixed";
         diff.style.right = 0;
         diff.style.bottom = 0;
         diff.width = 128;
@@ -71,7 +76,7 @@ function motionSensor(options){
         diff.style.webkitTransform = "scale(-1, 1)";
         diff.style.msTransform = "scale(-1, 1)";
         diff.style.transform = "scale(-1, 1)";
-        c.style.position = "absolute";
+        c.style.position = "fixed";
         c.style.right = "128px";
         c.style.bottom = 0;
         c.style.mozTransform = "scale(-0.25, 0.25)";
@@ -123,9 +128,8 @@ function motionSensor(options){
     this.fpsf = function(){
         // Frames per (2) second(s) 
         // TODO - dynamic resizing of noblocks for low-end devices
-        cfps = fps/2;
-        document.getElementById("fps").innerHTML = "FPS: "+cfps;
-        fps = 0;
+        that.fps = cfps/2;
+        cfps = 0;
     }
 
     // useful functions:
@@ -140,7 +144,7 @@ function motionSensor(options){
             dh = parseInt(PAINTHEIGHT/noblocks),
             dbw = parseInt(diff.width/noblocks),
             dbh = parseInt(diff.height/noblocks);
-        fps++;
+        cfps++;
 
         // looping goodness
         window.requestAnimationFrame(that.animLoop);
@@ -202,13 +206,13 @@ function motionSensor(options){
                     ls=rs=us=ds=0;
                     deltaw = mindist*diff.width;
                     deltah = mindist*diff.height;
-                    for(var i=0;i<parseInt(actiontimeout*cfps);i++){
+                    for(var i=0;i<parseInt(actiontimeout*that.fps);i++){
                         pos = mp-2*i-2;
                         if(pos < 0) pos = pos+120;
                         cx = mstore[pos]; cy = mstore[pos+1];
                         if(cx >= 0 && cy >= 0){
-                            if(cx > mx+deltaw) rs++;
-                            if(cx < mx-deltaw) ls++;
+                            if(cx > mx+deltaw) ls++;
+                            if(cx < mx-deltaw) rs++;
                             if(cy > my+deltah) us++;
                             if(cy < my-deltah) ds++;
                         }
@@ -226,7 +230,7 @@ function motionSensor(options){
                         var event = new CustomEvent("motion", {"detail":{"dir":bval}});
                         document.dispatchEvent(event);
                         // and the timeout
-                        timeout = parseInt(actiontimeout*cfps);
+                        timeout = parseInt(actiontimeout*that.fps);
                     }
                     // cyclic store
                     mstore[mp++] = mx; mstore[mp++] = my;

@@ -1,21 +1,25 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>MinorityReport.js</title>
+    <title>mocap.js</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, user-scalable=yes">
   </head>
   <body>
     <div id="fps"></div>
-    <div id="amplitude"></div>
     <div id="action"></div>
     <script src="mocap.js"></script>
     <script>
         var ms = new motionSensor();
         document.addEventListener("motion", function(e){
             console.log(e);
-            document.getElementById("action").innerHTML += e.detail.dir;
+            document.querySelector("#action").innerHTML += e.detail.dir;
         });
+
+        window.setInterval(fpsupdate,1000);
+        function fpsupdate(){
+            document.querySelector("#fps").innerHTML = "FPS: "+ms.fps;
+        }
     </script>
   </body>
 </html>

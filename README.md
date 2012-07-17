@@ -6,8 +6,8 @@ So it's been 10 years since minority report came out, and I think the question t
 Anyway, here's a basic direction capture library that's at least a start, check out the explainitory video here (need link)
 
 ## Spec (subject to change)
-*   init object: mr = new minorityCont()
-*   init w/ options: mr = new minorityCont({allowedActions: ['left','right'])
+*   init object: mr = new motionSensor()
+*   init w/ options: mr = new motionSensor({allowedActions: ['left','right'])
 *   start calibration: mr.startCal()
 *   register listener: document.addEventListener('motion', function(e){console.log(e.detail.dir);})
 
