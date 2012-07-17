@@ -217,8 +217,8 @@ function motionSensor(options){
                         if(pos < 0) pos = pos+120;
                         cx = mstore[pos]; cy = mstore[pos+1];
                         if(cx >= 0 && cy >= 0){
-                            if(cx > mx+deltaw) ls++;
-                            if(cx < mx-deltaw) rs++;
+                            if(cx > mx+deltaw) rs++;
+                            if(cx < mx-deltaw) ls++;
                             if(cy > my+deltah) us++;
                             if(cy < my-deltah) ds++;
                         }

@@ -142,8 +142,8 @@
 
     var ms = new motionSensor();
     document.addEventListener("motion", function(e){
-        if(e.detail.dir=='left') currentRot += 360/POSTERS_PER_ROW;
-        if(e.detail.dir=='right') currentRot -= 360/POSTERS_PER_ROW;
+        if(e.detail.dir=='left') currentRot -= 360/POSTERS_PER_ROW;
+        if(e.detail.dir=='right') currentRot += 360/POSTERS_PER_ROW;
         prefixstyle($("#rotate"),'transform', 'rotateY('+currentRot+'deg)');
     });
 
