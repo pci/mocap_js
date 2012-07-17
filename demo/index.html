@@ -1,0 +1,158 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Gallery Demo</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=yes">
+    <script src="../mocap.js"></script>
+    <style>
+      body {
+        font-family: 'Lucida Grande', Verdana, Arial;
+        font-size: 12px;
+        color:white;
+        background:#333;
+      }
+
+      #stage {
+        margin: 200px auto;
+        width: 600px;
+        height: 400px;
+        -webkit-perspective: 1000px;
+        -moz-perspective: 1000px;
+        -o-perspective: 1000px;
+        -ms-perspective: 1000px;
+        perspective: 1000px;
+      }
+
+      #rotate {
+        margin: 0 auto;
+        width: 600px;
+        height: 400px;
+        -webkit-transition: -webkit-transform 1s;
+        -moz-transition: -moz-transform 1s;
+        -o-transition: -o-transform 1s;
+        -ms-transition: -ms-transform 1s;
+        transition: transform 1s;
+        -moz-transform-style: preserve-3d;
+        -webkit-transform-style: preserve-3d;
+        -o-transform-style: preserve-3d;
+        -ms-transform-style: preserve-3d;
+        transform-style: preserve-3d;
+      }
+
+      .ring {
+        margin: 0 auto;
+        height: 110px;
+        width: 600px;
+      }
+      
+      .ring > :nth-child(odd) {
+        background-color: #995C7F;
+      }
+
+      .ring > :nth-child(even) {
+        background-color: #835A99;
+      }
+
+      .poster {
+        position: absolute;
+        left: 250px;
+        width: 200px;
+        height: 200px;
+        opacity: 0.95;
+        color: rgba(0,0,0,0.9);
+        border-radius: 10px;
+      }
+      
+      .poster > img {
+        border-radius: 10px;
+      }
+
+      footer {
+        position: fixed;
+        left:0;
+        bottom:0;
+        font-size: 2em;
+      }
+
+      a, a:visited {
+        color:#377;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="fps"></div>
+    <div id="stage">
+        <div id="rotate">
+            <div id="ringer" class="ring"></div>
+        </div>
+    </div>
+    <footer>Read more <a target="_blank" href="">here</a>, made by <a target="_blank" href="http://twitter.com/philingrey">@philingrey</a></footer>
+    <script>
+    var $ = (HTMLElement.prototype.$ = function(s) {
+        return this.querySelector(s);
+    }).bind(document);
+
+    var $$ = (HTMLElement.prototype.$$ = function(s) {
+        return this.querySelectorAll(s);
+    }).bind(document);
+
+    function prefixstyle(elem,stylename, stylevalue){
+        var prefixs = ["Webkit", "Moz", "Ms", "O"];
+        var caps = stylename[0].toUpperCase() + stylename.slice(1);
+        // check for unprefixed
+        if(elem.style[stylename]) {
+            elem.style[stylename] = stylevalue; 
+            return;
+        }
+        for(var i=0;i<prefixs.length;i++) {
+            elem.style[prefixs[i]+caps] = stylevalue;
+        }
+    }
+
+  const POSTERS_PER_ROW = 12;
+  const RING_RADIUS = 400;
+
+  var currentRot = 0;
+
+
+    /*
+        3D setup code from http://thewebrocks.com/demos/postercircle/
+    */
+  function setup_posters( row ) {
+    var posterAngle = 360 / POSTERS_PER_ROW;
+    for ( var i = 0; i < POSTERS_PER_ROW; i++ ) {
+      var poster = document.createElement('div');
+      poster.className = 'poster';
+      // compute and assign the transform for this poster
+      prefixstyle(poster,'transform', 'rotateY('+(posterAngle * i)+'deg) translateZ('+RING_RADIUS+'px)');
+      // setup the number to show inside the poster
+      var content = poster.appendChild( document.createElement( 'img' )) ;
+      content.src = "http://placekitten.com/200/200?image="+i;
+      content.width=200;
+      content.height=200;
+      // add the poster to the row
+      row.appendChild(poster);
+    }
+
+  }
+
+  setup_posters(document.querySelector( '#ringer' ) );
+
+    var ms = new motionSensor();
+    document.addEventListener("motion", function(e){
+        if(e.detail.dir=='left') currentRot -= 360/POSTERS_PER_ROW;
+        if(e.detail.dir=='right') currentRot += 360/POSTERS_PER_ROW;
+        prefixstyle($("#rotate"),'transform', 'rotateY('+currentRot+'deg)');
+    });
+
+    window.setInterval(fpsupdate,1000);
+    function fpsupdate(){
+        $("#fps").innerHTML = "FPS: "+ms.fps;
+    }
+
+    </script>
+  </body>
+</html>
