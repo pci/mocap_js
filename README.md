@@ -6,9 +6,9 @@ So it's been 10 years since minority report came out, and I think the question t
 Anyway, here's a basic direction capture library that's at least a start, check out the explainitory video here (need link)
 
 ## Spec (subject to change)
-*   init object: mr = new motionSensor()
-*   init w/ options: mr = new motionSensor({allowedActions: ['left','right'])
-*   start calibration: mr.startCal()
+*   init object: ms = new motionSensor()
+*   TODO: init w/ options: ms = new motionSensor({allowedActions: ['left','right'])
+*   TODO: start calibration: ms.startCal()
 *   register listener: document.addEventListener('motion', function(e){console.log(e.detail.dir);})
 
 ## License
