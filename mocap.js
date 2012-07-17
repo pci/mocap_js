@@ -103,7 +103,11 @@ function motionSensor(options){
             
             that.successCallback = function(stream) {
                 // Replace the source of the video element with the stream from the camera
-                v.src = window.URL.createObjectURL(stream) || stream;
+                if(navigator.getUserMedia==navigator.mozGetUserMedia) {
+                    v.src = stream;
+                } else{
+                    v.src = window.URL.createObjectURL(stream) || stream;
+                }
                 v.play();
             }
             
@@ -200,6 +204,8 @@ function motionSensor(options){
                     // distance traveled over time, but time between measurements is varied!
                     // 60fps is definite max (is it?)
                     // can use the last fps as that gives a good estimate
+
+                    // TODO: as horz and vert size different need to times vert changes by aspectRatio?
 
                     // ok so movment of [mindist]*width is needed in [actiontimeout]*cfps frames
                     var ls,rs,us,ds,cx,cy,pos,deltaw,deltah;
