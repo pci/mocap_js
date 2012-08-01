@@ -14,7 +14,7 @@ Anyway, here's a basic direction capture library that's at least a start, check 
     <body>
       <div id='output'></div>
     
-      <script src="./js/mocap.js" />
+      <script src="./js/mocap.js"></script>
       <script>
         var ms = new motionSensor();
         
