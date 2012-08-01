@@ -118,7 +118,7 @@ function motionSensor(options){
 
             navigator.getUserMedia(gumOptions, that.successCallback, that.errorCallback);
         } else {
-            var errorMsg = '<p class="error">Uh oh, it appears your browser doesn\'t support this feature.<br>Please try with a browser that has camera support.</p>';
+            var errorMsg = '<p class="error">Uh oh, it appears your browser doesn\'t support this feature.<br>Please try with a browser that has camera support. <br/> e.g. <a href=\'http://www.opera.com/\'>opera</a>, <a href=\'http://www.google.co.uk/chrome\'>chrome</a> or <a href=\'http://nightly.mozilla.org/\'>firefox nightly</a></p>';
             document.querySelector('[role=main]').innerHTML = errorMsg;
             console.log('Native web camera streaming (getUserMedia) is not supported in this browser.');
             v.play();
