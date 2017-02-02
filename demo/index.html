@@ -13,6 +13,15 @@
         background:#333;
       }
 
+      .error {
+        margin: 50px auto 0;
+        width: 400px;
+        padding: 5px;
+        border: 1px solid #C00;
+        border-radius: 10px 0;
+        text-align: center;
+      }
+
       #stage {
         margin: 200px auto;
         width: 600px;
@@ -68,6 +77,10 @@
         border-radius: 10px;
       }
 
+      h1 {
+        text-align: center;
+      }
+
       footer {
         position: fixed;
         left:0;
@@ -75,20 +88,21 @@
         font-size: 2em;
       }
 
-      a, a:visited {
+      a, a:visited, strong {
         color:#377;
         text-decoration: none;
       }
     </style>
   </head>
-  <body>
+  <body role="main">
     <div id="fps"></div>
+    <h1>Swipe in front of the webcam to move</h1>
     <div id="stage">
         <div id="rotate">
             <div id="ringer" class="ring"></div>
         </div>
     </div>
-    <footer>Read more <a target="_blank" href="">here</a>, made by <a target="_blank" href="http://twitter.com/philingrey">@philingrey</a></footer>
+    <footer>Read more <a target="_blank" href="http://github.com/pci/mocap_js/">here</a>, made by <a target="_blank" href="http://twitter.com/philingrey">@philingrey</a></footer>
     <script>
     var $ = (HTMLElement.prototype.$ = function(s) {
         return this.querySelector(s);
