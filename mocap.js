@@ -39,7 +39,7 @@ function motionSensor(options) {
   this.init = function () {
     v = document.createElement("video");
     c = document.createElement("canvas");
-    ctx = c.getContext("2d");
+    ctx = c.getContext("2d", { willReadFrequently: true });
     diff = document.createElement("canvas");
     difftx = diff.getContext("2d");
 
