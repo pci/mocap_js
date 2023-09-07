@@ -2,22 +2,22 @@
 <html>
   <head>
     <title>Gallery Demo</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, user-scalable=yes">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, user-scalable=yes" />
     <script src="../mocap.js"></script>
     <style>
       body {
-        font-family: 'Lucida Grande', Verdana, Arial;
+        font-family: "Lucida Grande", Verdana, Arial;
         font-size: 12px;
-        color:white;
-        background:#333;
+        color: white;
+        background: #333;
       }
 
       .error {
         margin: 50px auto 0;
         width: 400px;
         padding: 5px;
-        border: 1px solid #C00;
+        border: 1px solid #c00;
         border-radius: 10px 0;
         text-align: center;
       }
@@ -26,10 +26,6 @@
         margin: 200px auto;
         width: 600px;
         height: 400px;
-        -webkit-perspective: 1000px;
-        -moz-perspective: 1000px;
-        -o-perspective: 1000px;
-        -ms-perspective: 1000px;
         perspective: 1000px;
       }
 
@@ -37,16 +33,6 @@
         margin: 0 auto;
         width: 600px;
         height: 400px;
-        -webkit-transition: -webkit-transform 1s;
-        -moz-transition: -moz-transform 1s;
-        -o-transition: -o-transform 1s;
-        -ms-transition: -ms-transform 1s;
-        transition: transform 1s;
-        -moz-transform-style: preserve-3d;
-        -webkit-transform-style: preserve-3d;
-        -o-transform-style: preserve-3d;
-        -ms-transform-style: preserve-3d;
-        transform-style: preserve-3d;
       }
 
       .ring {
@@ -54,13 +40,13 @@
         height: 110px;
         width: 600px;
       }
-      
+
       .ring > :nth-child(odd) {
-        background-color: #995C7F;
+        background-color: #995c7f;
       }
 
       .ring > :nth-child(even) {
-        background-color: #835A99;
+        background-color: #835a99;
       }
 
       .poster {
@@ -69,10 +55,12 @@
         width: 200px;
         height: 200px;
         opacity: 0.95;
-        color: rgba(0,0,0,0.9);
+        color: rgba(0, 0, 0, 0.9);
         border-radius: 10px;
+        transition: transform 1s;
+        transform-style: preserve-3d;
       }
-      
+
       .poster > img {
         border-radius: 10px;
       }
@@ -83,13 +71,15 @@
 
       footer {
         position: fixed;
-        left:0;
-        bottom:0;
+        left: 0;
+        bottom: 0;
         font-size: 2em;
       }
 
-      a, a:visited, strong {
-        color:#377;
+      a,
+      a:visited,
+      strong {
+        color: #377;
         text-decoration: none;
       }
     </style>
@@ -98,74 +88,75 @@
     <div id="fps"></div>
     <h1>Swipe in front of the webcam to move</h1>
     <div id="stage">
-        <div id="rotate">
-            <div id="ringer" class="ring"></div>
-        </div>
+      <div id="rotate">
+        <div id="ringer" class="ring"></div>
+      </div>
     </div>
-    <footer>Read more <a target="_blank" href="//github.com/pci/mocap_js/">here</a>, made by <a target="_blank" href="//twitter.com/philingrey">@philingrey</a></footer>
+    <footer>
+      Read more <a target="_blank" href="//github.com/pci/mocap_js/">here</a>,
+      made by <a target="_blank" href="//twitter.com/philingrey">@philingrey</a>
+    </footer>
     <script>
-    var $ = (HTMLElement.prototype.$ = function(s) {
+      const $ = (HTMLElement.prototype.$ = function (s) {
         return this.querySelector(s);
-    }).bind(document);
+      }).bind(document);
 
-    var $$ = (HTMLElement.prototype.$$ = function(s) {
+      const $$ = (HTMLElement.prototype.$$ = function (s) {
         return this.querySelectorAll(s);
-    }).bind(document);
+      }).bind(document);
 
-    function prefixstyle(elem,stylename, stylevalue){
-        var prefixs = ["Webkit", "Moz", "Ms", "O"];
-        var caps = stylename[0].toUpperCase() + stylename.slice(1);
-        // check for unprefixed
-        if(elem.style[stylename]) {
-            elem.style[stylename] = stylevalue; 
-            return;
-        }
-        for(var i=0;i<prefixs.length;i++) {
-            elem.style[prefixs[i]+caps] = stylevalue;
-        }
-    }
+      const POSTERS_PER_ROW = 12;
+      const RING_RADIUS = 400;
 
-  const POSTERS_PER_ROW = 12;
-  const RING_RADIUS = 400;
+      let currentTheta = 0;
 
-  var currentRot = 0;
-
-
-    /*
+      /*
         3D setup code from http://thewebrocks.com/demos/postercircle/
     */
-  function setup_posters( row ) {
-    var posterAngle = 360 / POSTERS_PER_ROW;
-    for ( var i = 0; i < POSTERS_PER_ROW; i++ ) {
-      var poster = document.createElement('div');
-      poster.className = 'poster';
-      // compute and assign the transform for this poster
-      prefixstyle(poster,'transform', 'rotateY('+(posterAngle * i)+'deg) translateZ('+RING_RADIUS+'px)');
-      // setup the number to show inside the poster
-      var content = poster.appendChild( document.createElement( 'img' )) ;
-      content.src = "//placekitten.com/200/200?image="+i;
-      content.width=200;
-      content.height=200;
-      // add the poster to the row
-      row.appendChild(poster);
-    }
+      const posters = [];
+      function set_angles() {
+        const posterAngle = 360 / POSTERS_PER_ROW;
+        posters.forEach((poster, i) => {
+          const angle = posterAngle * i + currentTheta;
+          // compute and assign the transform for this poster
+          poster.style[
+            "transform"
+          ] = `rotateY(${angle}deg) translateZ(${RING_RADIUS}px)`;
+          // to stop browser confusion over vertical layering:
+          poster.style["z-index"] = Math.abs(180 - (angle % 360));
+        });
+      }
 
-  }
+      function setup_posters(row) {
+        const posterAngle = 360 / POSTERS_PER_ROW;
+        for (var i = 0; i < POSTERS_PER_ROW; i++) {
+          const poster = document.createElement("div");
+          poster.className = "poster";
+          // setup the number to show inside the poster
+          const content = poster.appendChild(document.createElement("img"));
+          content.src = "//placekitten.com/200/200?image=" + i;
+          content.width = 200;
+          content.height = 200;
+          // add the poster to the row
+          row.appendChild(poster);
+          posters.push(poster);
+        }
+        set_angles();
+      }
 
-  setup_posters(document.querySelector( '#ringer' ) );
+      setup_posters(document.querySelector("#ringer"));
 
-    var ms = new motionSensor();
-    document.addEventListener("motion", function(e){
-        if(e.detail.dir=='left') currentRot -= 360/POSTERS_PER_ROW;
-        if(e.detail.dir=='right') currentRot += 360/POSTERS_PER_ROW;
-        prefixstyle($("#rotate"),'transform', 'rotateY('+currentRot+'deg)');
-    });
+      var ms = new motionSensor();
+      document.addEventListener("motion", function (e) {
+        if (e.detail.dir == "left") currentTheta -= 360 / POSTERS_PER_ROW;
+        if (e.detail.dir == "right") currentTheta += 360 / POSTERS_PER_ROW;
+        set_angles();
+      });
 
-    window.setInterval(fpsupdate,1000);
-    function fpsupdate(){
-        $("#fps").innerHTML = "FPS: "+ms.fps;
-    }
-
+      window.setInterval(fpsupdate, 1000);
+      function fpsupdate() {
+        $("#fps").innerHTML = "FPS: " + ms.fps;
+      }
     </script>
   </body>
 </html>
